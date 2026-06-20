@@ -1,8 +1,13 @@
-FROM node:22
+FROM node:24
 
 WORKDIR /app
 
-RUN apt update && apt install postgresql-client-16 curl telnet zip unzip -y
+# Install PostgreSQL 16 client from official PostgreSQL repository
+RUN apt update && apt install -y curl gnupg telnet zip unzip \
+  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg \
+  && echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt update && apt install -y postgresql-client-16 \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"\
   && unzip awscliv2.zip && ./aws/install
