@@ -1,0 +1,12 @@
+#!/bin/bash
+
+cd /app/s3-backup || {
+  echo "Directory /app/s3-backup not found"
+  exit 1
+}
+
+if [ ! -d "node_modules" ]; then
+  npm install
+fi
+
+./update-s3-bucket

@@ -1,0 +1,110 @@
+#!/usr/bin/env node
+const AWS = require("aws-sdk");
+const moment = require("moment");
+
+// Configurar AWS SDK
+const s3 = new AWS.S3({
+  region: process.env.AWS_DEFAULT_REGION || "us-east-1",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
+
+const EXPIRATE_IN_MONTHS =
+  (process.env.EXPIRATE_IN_MONTHS && Number(process.env.EXPIRATE_IN_MONTHS)) ||
+  2;
+
+const AWS_PREFIX = process.env.AWS_PREFIX || "/";
+
+/**
+ * A helper function to handle async/await with try/catch
+ * @param {Function} fn - The async function to execute
+ * @returns {Promise<Array>} - An array where the first element is the error (if any) and the second is the result
+ */
+
+const decoratorTry = async (fn) => {
+  let res = null,
+    err = null;
+  try {
+    res = await fn();
+  } catch (e) {
+    err = e;
+  }
+  return [err, res];
+};
+
+/**
+ * @returns {Promise<AWS.S3.ObjectList>}
+ */
+async function listObjects() {
+  const params = { Bucket: process.env.AWS_BUCKET, Prefix: AWS_PREFIX };
+  const [err, data] = await decoratorTry(() =>
+    s3.listObjectsV2(params).promise(),
+  );
+
+  if (err) {
+    console.error(err.message);
+    return [];
+  }
+
+  return data.Contents;
+}
+
+/**
+ * @returns {Promise<AWS.S3.ObjectList>}
+ */
+const getOldBackups = async () => {
+  const res = await listObjects();
+  const regex = /[0-9]\.sql\.zip$/i;
+  const filesZip = res.filter(({ Key }) => regex.test(`${Key}`));
+  const currentDate = new Date();
+
+  const filesBackup = filesZip.filter(({ Key }) => {
+    const [str] = `${Key}`.split(".");
+    const fullYear = Number(str.slice(0, 4));
+    const month = Number(str.slice(4, 6)) - 1;
+    const day = Number(str.slice(6, 8));
+
+    if (Number.isNaN(fullYear) || Number.isNaN(month) || Number.isNaN(day)) {
+      return false;
+    }
+
+    const date = new Date(fullYear, month, day);
+    const diff = moment(currentDate).diff(date, "months");
+
+    if (diff < EXPIRATE_IN_MONTHS) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return filesBackup;
+};
+
+const deleteBackup = async (Key) => {
+  console.log(`Deleting backup: ${Key}`);
+  const params = { Bucket: process.env.AWS_BUCKET, Key, Prefix: AWS_PREFIX };
+  const [err] = await decoratorTry(() => s3.deleteObject(params).promise());
+
+  if (err) {
+    console.error(`Error deleting ${Key}: ${err.message}`);
+    return false;
+  }
+
+  console.log(`Deleted backup: ${Key}`);
+  return true;
+};
+
+async function main() {
+  const res = await getOldBackups();
+  console.log(`There are ${res.length} old backups to delete.`);
+
+  for (const { Key } of res) {
+    console.log(`Processing backup: ${Key}`);
+    await deleteBackup(Key);
+  }
+
+  console.log("Backup cleanup completed.");
+}
+
+main();

@@ -1,0 +1,8 @@
+database/
+.env
+.env.example
+.git/
+.gitignore
+Dockerfile
+backups/*.zip
+backups/*.sql

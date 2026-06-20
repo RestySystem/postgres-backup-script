@@ -1,0 +1,15 @@
+#!/bin/bash
+
+while true; do
+  # Use pg_isready to check PostgreSQL connection
+  PGPASSWORD=$DB_PASSWORD pg_isready -h $DB_HOSTNAME -p $DB_PORT -U $DB_USERNAME -d $DB_NAME > /dev/null 2>&1
+
+  if [ $? -ne 0 ]; then
+    echo -e "Intentando conectar a $DB_HOSTNAME en el puerto $DB_PORT...\n"
+  else
+    echo -e "Conexión exitosa a $DB_HOSTNAME en el puerto $DB_PORT\n"
+    break
+  fi
+
+  sleep 5
+done

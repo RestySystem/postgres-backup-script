@@ -1,0 +1,25 @@
+services:
+  backup-script:
+    env_file: .env
+    build: .
+    volumes:
+      - ./:/app/
+    environment:
+      - DB_USERNAME=${DB_USERNAME}
+    command: sleep infinity
+
+  postgres-server:
+    env_file: .env
+    image: postgres:16
+    volumes:
+      - "./database:/docker-entrypoint-initdb.d"
+      - "pgbackup:/var/lib/postgresql/data"
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgbackup:

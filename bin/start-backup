@@ -1,0 +1,37 @@
+#!/bin/bash
+FILENAME=""
+PATHNAME_BACKUP="/app/backups"
+PATH_SAVE=""
+
+while true; do
+  check-connection
+
+  if [ ! -z $PATH_SAVE ]; then
+    echo "removing files old"
+    rm $PATH_SAVE
+    echo "removed"
+  fi
+
+  echo "starting backup"
+  FILENAME=$(date +"%Y%m%d%H%M%S").sql
+  PATH_SAVE="$PATHNAME_BACKUP/$FILENAME"
+  PGPASSWORD=$DB_PASSWORD pg_dump -h $DB_HOSTNAME -U $DB_USERNAME -d $DB_NAME >$PATH_SAVE
+  echo "backup has finished successful like $FILENAME"
+
+  echo "reducing size file to upload"
+  zip "$PATH_SAVE.zip" $PATH_SAVE
+  rm $PATH_SAVE
+  PATH_SAVE="$PATH_SAVE.zip"
+  echo "compresion completa"
+
+  echo "uploading AWS S3"
+  pathfile=$PATH_SAVE upload-backup
+  echo "uploaded AWS S3"
+
+  echo "Cleanup Backup on S3"
+  update-s3-bucket
+  echo "Cleanup complete"
+
+  sleep $TIME_SLEEP
+done
+
