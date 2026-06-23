@@ -22,4 +22,4 @@ RUN cd /app/s3-backup && npm install && cd /app/
 
 ENV PATH=$PATH:/app/bin
 
-CMD ["sleep", "infinity"]
+CMD ["start-backup"]
