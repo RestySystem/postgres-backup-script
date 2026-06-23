@@ -18,7 +18,7 @@ COPY . .
 
 RUN chmod +x -R /app/bin
 RUN chmod +x /app/s3-backup/update-s3-bucket
-RUN cd /app/s3-backup && npm install && cd app/
+RUN cd /app/s3-backup && npm install && cd /app/
 
 ENV PATH=$PATH:/app/bin
 
